@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Image & Video Generator</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      padding: 20px;
+    }
+    h2 {
+      color: #333;
+    }
+    .section {
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    input, textarea, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #preview img {
+      width: 150px;
+      margin: 5px;
+      border-radius: 8px;
+    }
+    video {
+      width: 100%;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>AI Image & Video Generator (Free Demo)</h1>
+
+  <!-- Prompt to Image (Static demo for now) -->
+  <div class="section">
+    <h2>Prompt to Image (Demo)</h2>
+    <textarea id="prompt" rows="2" placeholder="e.g. A cat on the moon"></textarea>
+    <button onclick="generateImage()">Generate Image</button>
+    <div id="image-output"></div>
+  </div>
+
+  <!-- Image to Video -->
+  <div class="section">
+    <h2>Image to Video (with Download)</h2>
+    <input type="file" id="image-upload" multiple accept="image/*" />
+    <button onclick="createVideo()">Convert to Video</button>
+    <video id="result-video" controls></video>
+    <a id="download-link" style="display:none" download="output.webm">Download Video</a>
+  </div>
+
+  <!-- Prompt to Video -->
+  <div class="section">
+    <h2>Prompt to Video (Coming Soon)</h2>
+    <textarea placeholder="e.g. A robot walking in the rain" disabled></textarea>
+    <button disabled>Generate Video (AI)</button>
+    <p style="color: gray;">Note: Real AI video generation needs cloud API like Sora, Kling.ai etc.</p>
+  </div>
+
+  <script>
+    function generateImage() {
+      const prompt = document.getElementById('prompt').value.trim();
+      const output = document.getElementById('image-output');
+      output.innerHTML = '';
+
+      if (!prompt) {
+        alert('Please enter a prompt.');
+        return;
+      }
+
+      // DEMO: Static image placeholder (You can add real API later)
+      const img = document.createElement('img');
+      img.src = 'https://placekitten.com/400/300';
+      output.appendChild(img);
+    }
+
+    async function createVideo() {
+      const input = document.getElementById('image-upload');
+      const video = document.getElementById('result-video');
+      const downloadLink = document.getElementById('download-link');
+
+      if (!input.files.length) {
+        alert('Please upload some images.');
+        return;
+      }
+
+      const images = Array.from(input.files);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const frames = [];
+
+      for (let file of images) {
+        const img = await loadImage(URL.createObjectURL(file));
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        frames.push(canvas.toDataURL('image/webp'));
+      }
+
+      // Use Whammy.js alternative (pure JS) to encode video
+      const stream = canvas.captureStream();
+      const mediaRecorder = new MediaRecorder(stream);
+      let chunks = [];
+
+      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        video.src = url;
+        downloadLink.href = url;
+        downloadLink.style.display = 'inline-block';
+      };
+
+      let i = 0;
+      mediaRecorder.start();
+      const interval = setInterval(() => {
+        if (i < frames.length) {
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0);
+          };
+          img.src = frames[i];
+          i++;
+        } else {
+          clearInterval(interval);
+          mediaRecorder.stop();
+        }
+      }, 1000); // 1 frame per second
+    }
+
+    function loadImage(src) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = src;
+      });
+    }
+  </script>
+
+</body>
+</html>
